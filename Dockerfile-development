@@ -1,0 +1,12 @@
+FROM node:6.2.2
+
+RUN npm install -g nodemon
+
+COPY ./package.json /src/package.json
+RUN cd /src && npm install
+
+COPY . /src
+
+WORKDIR /src
+
+CMD ["nodemon", "-L", "-e", "js,sql", "run", "start-dev"]

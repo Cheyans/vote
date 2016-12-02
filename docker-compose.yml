@@ -1,0 +1,9 @@
+version: '2'
+
+services:
+  faf-vote:
+    build: ./
+    env_file:
+      - .env
+    ports:
+      - "80:3000"
