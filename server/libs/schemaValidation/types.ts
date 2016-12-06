@@ -1,11 +1,5 @@
-import {Request} from "express";
+import {IAuthedRequest} from "../auth/types";
 
-export interface IAuthedSchemaRequest<T> extends Request {
+export interface IAuthedSchemaRequest<T> extends IAuthedRequest {
   schema: T;
-  user: {
-    sub: number,
-    username: string,
-    banned: boolean,
-    permissions: string
-  };
 }
