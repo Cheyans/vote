@@ -14,6 +14,10 @@
     "ordered-imports": false,
     "max-classes-per-file": false,
     "no-namespace": false,
-    "member-ordering": [true, {"order": "instance-sandwich"}]
+    "member-ordering": [true,
+      "static-before-instance",
+      "public-before-private",
+      "variables-before-functions"
+    ]
   }
 }

@@ -3,6 +3,9 @@
 /**
  * Module dependencies.
  */
+if (process.env.NODE_ENV == "development" && process.argv.find((v) => v === "--no-docker")) {
+  require("dotenv").config();
+}
 
 var app = require('../app');
 var debug = require('debug')('faf-vote:server');
@@ -12,7 +15,7 @@ var http = require('http');
  * Get port from environment and store in Express.
  */
 
-var port = normalizePort(process.env.PORT || '3000');
+var port = normalizePort(process.env.PORT || '300 0');
 app.set('port', port);
 
 /**

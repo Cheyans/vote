@@ -1,6 +1,7 @@
 DROP TABLE IF EXISTS votes;
 DROP TABLE IF EXISTS answers;
 DROP TABLE IF EXISTS questions;
+DROP TABLE IF EXISTS survey_banned_ips;
 DROP TABLE IF EXISTS survey_banned_users;
 DROP TABLE IF EXISTS users;
 DROP TABLE IF EXISTS surveys;
@@ -12,11 +13,14 @@ CREATE TABLE permissions (
   PRIMARY KEY (id)
 );
 
+INSERT INTO permissions (id, permission) VALUES (1, 'none');
+
 CREATE TABLE surveys (
   id INTEGER NOT NULL AUTO_INCREMENT,
-  survey_name VARCHAR(256) NOT NULL,
+  name VARCHAR(256) NOT NULL,
   start_dtm TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
   end_dtm TIMESTAMP NULL DEFAULT NULL,
+  CONSTRAINT end_dtm_gt_start_dtm CHECK (start_dtm >= end_dtm),
   PRIMARY KEY(id)
 );
 
@@ -24,36 +28,46 @@ CREATE TABLE users (
   id INTEGER NOT NULL,
   username VARCHAR(60) NOT NULL,
   banned TINYINT NOT NULL DEFAULT 0,
-  permission_id INTEGER DEFAULT NULL,
+  permission_id INTEGER NOT NULL DEFAULT 1,
   PRIMARY KEY (id),
   FOREIGN KEY (permission_id) REFERENCES permissions (id)
+);
+
+CREATE TABLE survey_banned_ips (
+  id INTEGER NOT NULL AUTO_INCREMENT,
+  survey_id INTEGER NOT NULL,
+  ip VARCHAR(15) NOT NULL,
+  PRIMARY KEY (id),
+  FOREIGN KEY (survey_id) REFERENCES surveys (id)
 );
 
 CREATE TABLE survey_banned_users (
   id INTEGER NOT NULL AUTO_INCREMENT,
   survey_id INTEGER NOT NULL,
-  user_id INTEGER NOT NULL,
+  user_id INTEGER DEFAULT NULL,
+  shadow_username VARCHAR(60) DEFAULT NULL,
   PRIMARY KEY (id),
   FOREIGN KEY (survey_id) REFERENCES surveys (id),
-  FOREIGN KEY (user_id) REFERENCES users (id)
+  FOREIGN KEY (user_id) REFERENCES users (id),
+  CONSTRAINT id_or_shadow_user CHECK (user_id IS NOT NULL OR shadow_username IS NOT NULL)
 );
 
 CREATE TABLE questions (
   id INTEGER NOT NULL AUTO_INCREMENT,
-  question TEXT CHARACTER SET utf8,
+  question TEXT CHARACTER SET utf8 NOT NULL,
   survey_id INTEGER NOT NULL,
-  display_order SMALLINT NOT NULL DEFAULT -1,
-  max_votes_per_user INTEGER NOT NULL DEFAULT 1,
-  min_votes_per_user INTEGER NOT NULL DEFAULT 1,
+  display_order SMALLINT,
+  max_votes_per_user INTEGER,
+  min_votes_per_user INTEGER,
   PRIMARY KEY (id),
   FOREIGN KEY (survey_id) REFERENCES surveys (id)
 );
 
 CREATE TABLE answers (
   id INTEGER NOT NULL AUTO_INCREMENT,
-  answer TEXT CHARACTER SET utf8,
+  answer TEXT CHARACTER SET utf8 NOT NULL,
   question_id INTEGER NOT NULL,
-  display_order TINYINT NOT NULL DEFAULT -1,
+  display_order TINYINT,
   PRIMARY KEY (id),
   FOREIGN KEY (question_id) REFERENCES questions (id)
 );

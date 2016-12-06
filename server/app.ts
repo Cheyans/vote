@@ -1,18 +1,16 @@
 import * as express from "express";
 import * as bodyParser from "body-parser";
-// import * as auth from "./routes/auth";
-import authMiddleware from "./libs/auth/utils";
-import errorHandler from "./libs/errors/errorMiddleware";
+import * as survey from "./routes/survey";
+import authMiddleware from "./libs/auth/middleware";
+import errorHandler from "./libs/errors/middleware";
+import * as auth from "./routes/auth";
 
 const app = express();
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({extended: false}));
 
-// unauthenticated routes
-// app.use("/api/v1/oauth", auth);
-
-// authenticated routes
-app.use(authMiddleware);
+app.use("/api/v1/auth", auth);
+app.use("/api/v1/survey", survey);
 
 app.use(errorHandler);
 

@@ -1,9 +1,11 @@
 import * as njwt from "njwt";
 import {Request, Response, NextFunction} from "express";
 import {ResponseErrors} from "../errors/errors";
-import {SIGNING_KEY, IAuthedRequest} from "../auth";
+import {IAuthedRequest} from "./types";
 import TokenExpired = ResponseErrors.TokenExpired;
 import UnauthorizedAccess = ResponseErrors.UnauthorizedAccess;
+
+const SIGNING_KEY = process.env.SIGNING_KEY;
 
 export default function authHandler(req: Request, res: Response, next: NextFunction) {
   const token = req.headers.authorization;

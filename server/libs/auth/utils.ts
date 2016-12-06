@@ -1,15 +1,20 @@
 import * as njwt from "njwt";
 import {Response, NextFunction} from "express";
 import {ResponseErrors} from "../errors/errors";
-import {getUser} from "../database/database";
-import {IAuthedRequest} from "./types";
+import {getUser} from "../database/accessor";
+import {IAuthedRequest, IUnsignedToken} from "./types";
 import TokenExpired = ResponseErrors.TokenExpired;
 import UnauthorizedAccess = ResponseErrors.UnauthorizedAccess;
+import NotFound = ResponseErrors.NotFound;
+import {WEEK} from "../../utils/Time";
 
 export const SIGNING_KEY = process.env.SIGNING_KEY;
 
 export async function generateUserJwt(id: number) {
   const user = await getUser(id);
+  if (user == null) {
+    throw new NotFound(id);
+  }
   const claims = {
     iss: "FAF",
     sub: user.id,
@@ -17,7 +22,7 @@ export async function generateUserJwt(id: number) {
     banned: Boolean(user.banned),
     permissions: user.permissions
   };
-  return njwt.create(claims, SIGNING_KEY).compact();
+  return createAndCompact(claims);
 }
 
 export function permissions(permission: string) {
@@ -25,7 +30,14 @@ export function permissions(permission: string) {
     if (req.user.permissions !== permission) {
       return next(new UnauthorizedAccess());
     }
+    next();
   };
+}
+
+export function createAndCompact(claims: IUnsignedToken) {
+  const token = njwt.create(claims, SIGNING_KEY);
+  token.setExpiration(new Date().getTime() + WEEK);
+  return token.compact();
 }
 
 // const config = {
