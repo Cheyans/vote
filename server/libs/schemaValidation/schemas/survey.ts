@@ -6,16 +6,14 @@ const survey = Joi.object().keys({
   endDate: Joi.date().min(Joi.ref("startDate")).required(),
   questions: Joi.array().items(Joi.object().keys({
     question: Joi.string(),
+    multiAnswer: Joi.boolean().optional(),
     orderNumber: Joi.number().optional(),
-    maxVotesPerUser: Joi.number().optional(),
-    minVotesPerUser: Joi.number().optional(),
-    answers: Joi.array().items(Joi.object().keys({
+    answerOptions: Joi.array().items(Joi.object().keys({
       answer: Joi.string().required(),
+      openResponse: Joi.boolean().optional(),
       orderNumber: Joi.number().optional()
     })).required()
-  })).required(),
-  bannedUsers: Joi.array().items(Joi.string()).optional(),
-  bannedIps: Joi.array().items(Joi.string().ip()).optional()
+  })).required()
 });
 
 export interface ISurvey {
@@ -23,20 +21,19 @@ export interface ISurvey {
   startDate?: Date;
   endDate: Date;
   questions: [IQuestion];
-  bannedUsers?: [string];
-  bannedIps?: [string];
 }
 
 export interface IQuestion {
   question: string;
+  multiAnswer?: boolean;
   orderNumber?: number;
-  maxVotesPerUser?: number;
-  minVotesPerUser?: number;
-  answers: [IAnswer];
+  answers: IAnswerOptions[];
 }
 
-export interface IAnswer {
+export interface IAnswerOptions {
   answer: string;
+  openResponse: boolean;
   orderNumber?: number;
 }
+
 export default survey;

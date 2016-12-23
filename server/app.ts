@@ -4,6 +4,7 @@ import * as survey from "./routes/survey";
 import authMiddleware from "./libs/auth/middleware";
 import errorHandler from "./libs/errors/middleware";
 import * as auth from "./routes/auth";
+// Necessary for typeorm
 
 const app = express();
 app.use(bodyParser.json());

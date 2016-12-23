@@ -6,21 +6,18 @@ import {IAuthedRequest, IUnsignedToken} from "./types";
 import TokenExpired = ResponseErrors.TokenExpired;
 import UnauthorizedAccess = ResponseErrors.UnauthorizedAccess;
 import NotFound = ResponseErrors.NotFound;
-import {WEEK} from "../../utils/Time";
+import {WEEK} from "../../utils/time";
+import Users from "../database/tables/users";
 
 export const SIGNING_KEY = process.env.SIGNING_KEY;
 
-export async function generateUserJwt(id: number) {
-  const user = await getUser(id);
-  if (user == null) {
-    throw new NotFound(id);
-  }
+export function generateUserJwt(user: Users) {
   const claims = {
     iss: "FAF",
     sub: user.id,
     username: user.username,
     banned: Boolean(user.banned),
-    permissions: user.permissions
+    permissions: user.permission.permission
   };
   return createAndCompact(claims);
 }

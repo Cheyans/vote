@@ -1,10 +1,11 @@
 import {StrNum} from "../../utils/types";
-import {User, ID, Insert} from "./types";
-import {ISurvey, IQuestion, IAnswer} from "../schemaValidation/schemas/survey";
+import {User, ID, Insert, Survey, IModel} from "./types";
+import {ISurvey, IQuestion, IAnswerOptions} from "../schemaValidation/schemas/survey";
 import Database from "./database";
 import {isNullOrUndefined} from "util";
 import logger from "../logger";
 import {IConnection} from "mysql";
+import Users from "./tables/users";
 
 const database: Database = Database.getInstance();
 
@@ -29,7 +30,7 @@ export async function insertSurvey(survey: ISurvey): Promise<ID> {
       try {
         const surveyResult = (<Insert> await database.insertOne(
           `INSERT INTO surveys (name, start_dtm, end_dtm)
-           VALUES (?)`, [survey.name, survey.startDate, survey.endDate], true, connection));
+           VALUES (?)`, [survey.name, survey.startDate, survey.endDate], connection));
         const surveyId = surveyResult.insertId;
 
         const formattedQuestions = survey.questions.map((q: IQuestion) => {
@@ -37,11 +38,11 @@ export async function insertSurvey(survey: ISurvey): Promise<ID> {
         });
         await database.insertMany(
           `INSERT INTO questions (question, survey_id, display_order, max_votes_per_user, min_votes_per_user) 
-           VALUES ?`, formattedQuestions, true, connection);
+           VALUES ?`, formattedQuestions, connection);
         const questionIds = await getQuestionsAscOrder(surveyId, connection);
 
         const formattedAnswers = survey.questions.reduce((answers: StrNum[][], question: IQuestion, i: number) => {
-          question.answers.forEach((a: IAnswer) => {
+          question.answerOptions.forEach((a: IAnswerOptions) => {
             answers.push([a.answer, questionIds[i].id, a.orderNumber]);
           });
           return answers;
@@ -78,8 +79,33 @@ export async function insertSurvey(survey: ISurvey): Promise<ID> {
   });
 }
 
+export async function getSurvey(id: number, connection?: IConnection): Promise<Survey> {
+  const surveyRows = await database.queryManyRows(`
+    SELECT
+      s.id as surveyId,
+      s.name as name,
+      s.start_dtm as startDate,
+      s.end_dtm as endDate,
+      q.question as question,
+      q.order_number as questionOrderNumber,
+      q.max_votes_per_user as maxVotesPerUser,
+      q.min_votes_per_user as minVotesPerUser,
+      a.answer as answer,
+      a.order_number as answerOrderNumber
+    FROM surveys s
+    INNER JOIN questions q on q.survey_id = s.id
+    INNER JOIN answers a on a.question_id = q.id
+    WHERE s.id = ?`, [id], IModel, connection);
+  const bannedIps = await database.queryManyRows(`
+    SELECT
+      user_id,
+      shadow_username
+    FROM survey_banned_users
+    WHERE survey_id = ?`, [id], IModel);
+}
+
 export async function getUsersFromUsernames(usernames: string[], connection?: IConnection): Promise<[User]> {
-  return database.queryMany<User>(`
+  return database.queryManyRows<User>(`
     SELECT 
       id,
       username
@@ -94,7 +120,7 @@ export async function getUsersFromUsernames(usernames: string[], connection?: IC
  * @returns {Promise<[ID]>} - promise of list of question ids
  */
 export async function getQuestionsAscOrder(surveyId: StrNum, connection?: IConnection): Promise<[ID]> {
-  return database.queryMany<ID>(`
+  return database.queryManyRows<ID>(`
     SELECT
       id
     FROM questions
@@ -143,30 +169,17 @@ export async function updateUser(id: StrNum, username?: string, banned?: boolean
     WHERE id = ?`, [username, id]);
 }
 
-/**
- * Inserts a list of new users into the db
- * @param {Array<{id: string, username: string}>} users - list of users
- * @returns {Promise<Insert>} - promise of result
- */
-export async function insertNewUsers(users: Array<{id: string, username: string}>): Promise<Insert> {
-  return database.insertMany(`
-    INSERT INTO users (id, username)
-    VALUES ?`, users.map((user) => [user.id, user.username]));
-}
 
 /**
  * Gets user from db
  * @param {number} id - id of user
- * @returns {Promise<null|User>} - promise of result
+ * @returns {Promise<Users|undefined>} - promise of result
  */
-export async function getUser(id: number): Promise<User | null> {
-  return database.queryOne<User>(`
-    SELECT
-      u.id as id,
-      u.username as username,
-      u.banned as banned,
-      p.permission as permissions
-    FROM users u
-    INNER JOIN permissions p ON p.id = u.permission_id
-    WHERE u.id = ?`, [id], User);
+export async function getUser(id: number): Promise<Users | undefined> {
+  return database.connection.getRepository(Users).findOneById(1, {
+    alias: "users",
+    innerJoinAndSelect: {
+      "permissions": "users.permissions"
+    }
+  });
 }

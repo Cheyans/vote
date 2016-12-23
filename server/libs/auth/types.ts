@@ -1,7 +1,8 @@
 import {Request} from "express";
+import {StrNum} from "../../utils/types";
 
 export interface IUnsignedToken {
-  sub: string;
+  sub: StrNum;
   username: string;
   banned: boolean;
   permissions: string;

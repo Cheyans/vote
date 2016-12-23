@@ -1,87 +1,49 @@
-DROP TABLE IF EXISTS votes;
-DROP TABLE IF EXISTS answers;
-DROP TABLE IF EXISTS questions;
-DROP TABLE IF EXISTS survey_banned_ips;
-DROP TABLE IF EXISTS survey_banned_users;
-DROP TABLE IF EXISTS users;
+DROP TABLE IF EXISTS survey_answers;
+DROP TABLE IF EXISTS survey_question_options;
+DROP TABLE IF EXISTS survey_questions;
 DROP TABLE IF EXISTS surveys;
-DROP TABLE IF EXISTS permissions;
-
-CREATE TABLE permissions (
-  id INTEGER NOT NULL AUTO_INCREMENT,
-  permission VARCHAR(60) NOT NULL,
-  PRIMARY KEY (id)
-);
-
-INSERT INTO permissions (id, permission) VALUES (1, 'none');
 
 CREATE TABLE surveys (
   id INTEGER NOT NULL AUTO_INCREMENT,
   name VARCHAR(256) NOT NULL,
+  author_id MEDIUMINT(8) unsigned NOT NULL,
   start_dtm TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  end_dtm TIMESTAMP NULL DEFAULT NULL,
-  CONSTRAINT end_dtm_gt_start_dtm CHECK (start_dtm >= end_dtm),
-  PRIMARY KEY(id)
+  end_dtm TIMESTAMP NOT NULL DEFAULT '2038-01-18 03:14:07',
+  update_dtm TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  CONSTRAINT end_dtm_gt_start_dtm CHECK (start_dtm <= end_dtm),
+  PRIMARY KEY(id),
+  FOREIGN KEY (author_id) REFERENCES login (id) ON DELETE CASCADE ON UPDATE CASCADE
 );
 
-CREATE TABLE users (
-  id INTEGER NOT NULL,
-  username VARCHAR(60) NOT NULL,
-  banned TINYINT NOT NULL DEFAULT 0,
-  permission_id INTEGER NOT NULL DEFAULT 1,
-  PRIMARY KEY (id),
-  FOREIGN KEY (permission_id) REFERENCES permissions (id)
-);
-
-CREATE TABLE survey_banned_ips (
+CREATE TABLE survey_questions (
   id INTEGER NOT NULL AUTO_INCREMENT,
   survey_id INTEGER NOT NULL,
-  ip VARCHAR(15) NOT NULL,
-  PRIMARY KEY (id),
-  FOREIGN KEY (survey_id) REFERENCES surveys (id)
-);
-
-CREATE TABLE survey_banned_users (
-  id INTEGER NOT NULL AUTO_INCREMENT,
-  survey_id INTEGER NOT NULL,
-  user_id INTEGER DEFAULT NULL,
-  shadow_username VARCHAR(60) DEFAULT NULL,
-  PRIMARY KEY (id),
-  FOREIGN KEY (survey_id) REFERENCES surveys (id),
-  FOREIGN KEY (user_id) REFERENCES users (id),
-  CONSTRAINT id_or_shadow_user CHECK (user_id IS NOT NULL OR shadow_username IS NOT NULL)
-);
-
-CREATE TABLE questions (
-  id INTEGER NOT NULL AUTO_INCREMENT,
   question TEXT CHARACTER SET utf8 NOT NULL,
-  survey_id INTEGER NOT NULL,
-  display_order SMALLINT,
-  max_votes_per_user INTEGER,
-  min_votes_per_user INTEGER,
+  multi_answer TINYINT NOT NULL DEFAULT FALSE COMMENT 'If user can select multiple options',
+  display_order SMALLINT NULL COMMENT 'Relative to all questions found under one survey_id',
   PRIMARY KEY (id),
-  FOREIGN KEY (survey_id) REFERENCES surveys (id)
+  FOREIGN KEY (survey_id) REFERENCES surveys (id) ON DELETE CASCADE ON UPDATE CASCADE
 );
 
-CREATE TABLE answers (
+CREATE TABLE survey_question_options (
   id INTEGER NOT NULL AUTO_INCREMENT,
-  answer TEXT CHARACTER SET utf8 NOT NULL,
   question_id INTEGER NOT NULL,
-  display_order TINYINT,
+  `option` TEXT CHARACTER SET utf8 NOT NULL,
+  open_response TINYINT NOT NULL DEFAULT FALSE COMMENT 'If the answer allows for custom user input, user reponse should be put in corresponding survey_ansers.response column',
+  display_order SMALLINT NULL COMMENT 'Relative to all questions found under one qustion_id',
   PRIMARY KEY (id),
-  FOREIGN KEY (question_id) REFERENCES questions (id)
+  FOREIGN KEY (question_id) REFERENCES survey_questions (id) ON DELETE CASCADE ON UPDATE CASCADE
 );
 
-CREATE TABLE votes (
+CREATE TABLE survey_answers (
   id INTEGER NOT NULL AUTO_INCREMENT,
-  user_id INTEGER NOT NULL,
-  question_id INTEGER NOT NULL,
-  answer_id INTEGER NOT NULL,
-  vote_dtm TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  valid TINYINT NOT NULL DEFAULT 1,
+  user_id MEDIUMINT(8) unsigned NOT NULL,
+  option_id INTEGER NOT NULL,
+  response TEXT CHARACTER SET utf8 NULL COMMENT 'Should be populated only if corresponding survey_question_option.open_response column is true',
+  answer_dtm TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  valid TINYINT NOT NULL DEFAULT TRUE,
   ip VARCHAR(15) NOT NULL,
   PRIMARY KEY (id),
-  FOREIGN KEY (question_id) REFERENCES questions (id),
-  FOREIGN KEY (answer_id) REFERENCES answers (id),
-  FOREIGN KEY (user_id) REFERENCES users (id)
+  FOREIGN KEY (option_id) REFERENCES survey_question_options (id) ON DELETE CASCADE ON UPDATE CASCADE,
+  FOREIGN KEY (user_id) REFERENCES login (id) ON DELETE CASCADE ON UPDATE CASCADE
 );
